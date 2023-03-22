@@ -39,6 +39,7 @@ class W2(Base):
         return d_loss
 
     def calc_gloss(self, x, y, ux, vy, config):
+        """Computes generator loss by implicitly performing p.w. matching. Need to update for other options."""
         return torch.mean(vy)
 
     def get_stats(self,  config):
