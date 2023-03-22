@@ -19,7 +19,7 @@ def solve_assignment(z, r, cost, batch_size):
     indices = linear_assignment(to_data(c))
     # Convert indices to numpy array
     indices = np.array(indices)
-    approx_tz = r[indices[:, 1]]
+    approx_tz = r[indices[1, :]]
     return approx_tz
 
 def visualize_iter(images, dir, step, config, data_range=(-2, 2)):
