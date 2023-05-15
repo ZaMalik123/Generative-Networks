@@ -9,7 +9,7 @@ from collections import OrderedDict
 class Base(object):
     def __init__(self, config, r_loader, z_loader):
         self.config = config
-        self.cost = functools.partial(losses.cost, l=config.l, p=config.p)
+        self.cost = functools.partial(losses.cost, l=config.l, p=config.p) # Obtain function that behaves like cost with given parameters
         self.z_generator = z_loader
         self.r_generator = r_loader
         self.fixed_z = utils.to_var(next(self.z_generator))
