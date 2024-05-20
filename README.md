@@ -12,6 +12,7 @@ scikit-learn (sklearn) (0.19.1)
 matplotlib (2.2.2)
 python (3.6)
 tensorboardX (optional, remove dependency if not used)
+python optimal transport (0.9.3)
 ```
 
 ## Experiments
