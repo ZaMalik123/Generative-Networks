@@ -15,7 +15,7 @@ tensorboardX (optional, remove dependency if not used)
 ```
 
 ## Experiments
-All experiments are intended to be run through the command line. I recommend using Google Colab to run this code.
+All experiments are intended to be run through the command line. I recommend using Google Colab to run this code. Change solver to w1 to recreate W1-FE experiments.
 
 ### 2D/OT (exp_2d)
 
