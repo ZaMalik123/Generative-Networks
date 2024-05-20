@@ -27,7 +27,8 @@ python main.py --solver=w2 --gen=1 --data=4gaussians
 python main.py --solver=w2 --gen=1 --data=swissroll
 # checkerboard
 python main.py --solver=w2 --gen=1 --data=checkerboard
-
+# rings
+python main.py --solver=w2 --gen=1 --data='ring'
 # W2-OT
 # 4 gaussians
 python main.py --solver=w2 --gen=0 --data=4gaussians --train_iters=20000
