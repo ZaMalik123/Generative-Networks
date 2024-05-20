@@ -17,6 +17,10 @@ def get_loader(config):
         return CheckerboardGenerator(config.batch_size, eps_noise=0.5), \
             CheckerboardGenerator(config.batch_size, eps_noise=0.5, alternate=True)
 
+    elif config.data == 'ring':
+      return RingGenerator(config.batch_size, eps_noise=0.1), \
+        RingGenerator(config.batch_size, eps_noise=0.1, alternate=True)
+
     else:
         raise NotImplementedError('requested data: %s is not implemented' % config.data)
 
@@ -147,4 +151,45 @@ class CheckerboardGenerator(SyntheticDataGenerator):
         batch = np.array(batch, dtype='float32')
         batch = self.float_tensor(batch)
         batch = batch[torch.randperm(batch.size(0)), :]
+        return batch
+
+# 20230523 ZMALIK: Add a new type of dataset for experimentation.
+class RingGenerator(SyntheticDataGenerator):
+    "Samples from a ring of 8 Gaussians or from one gaussian in the center depending on alternate"
+
+    def __init__(self,
+                  batch_size: int=256,
+                  scale: float=2.,
+                  eps_noise: float=0.05,
+                  alternate: bool=False):
+        self.batch_size = batch_size
+        self.scale = scale
+        self.eps_noise = eps_noise
+        self.alternate = alternate
+
+    def get_batch(self):
+      if self.alternate:
+        batch = np.random.randn(self.batch_size, 2) * self.eps_noise
+        batch = np.array(batch, dtype='float32')
+        batch = batch*0.5
+        return self.float_tensor(batch)
+      else:
+        batch = []
+        # Init angels of the means
+        angles = torch.cumsum((2 * np.pi / 8) * torch.ones((8)), dim=0)
+        # Convert angles to 2D coordinates
+        means = torch.stack([torch.cos(angles), torch.sin(angles)], dim=0)
+        # Generate data
+        data = torch.empty((2, self.batch_size))
+        counter = 0
+        for gaussian in range(means.shape[1]):
+            for sample in range(int(self.batch_size / 8)):
+                data[:, counter] = torch.normal(means[:, gaussian], self.eps_noise)
+                counter += 1
+        # Reshape data
+        data = data.T
+        # Shuffle data
+        data = data[torch.randperm(data.shape[0])]
+        # Convert numpy array to tensor
+        batch = data.float()
         return batch

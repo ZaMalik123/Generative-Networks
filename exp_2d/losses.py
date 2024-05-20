@@ -1,6 +1,7 @@
 import torch
 import utils
 from torch.autograd import Variable
+import ot # Use POT for Wasserstein 1,2 losses
 
 def calc_cosine(x, approx_fx, fx):
     a = approx_fx - x
@@ -66,3 +67,38 @@ def gp_loss(x, y, disc, lm, clamp=True):
     if clamp:
         diff = torch.clamp(diff, 0)
     return lm*torch.mean(diff**2)
+
+def w1_loss(x, y, config):
+    '''
+    20230718 ZMALIK: Compute an estimate of the W1 distance between sample x and y
+    INPUT: 
+      x: n by 2 vector
+      y: n by 2 vector
+      config: Input arguments from terminal.
+    OUTPUT:
+      w1: Estimate of the Wasserstein-1 distance between the two distributions
+      from which x and y are drawn from. 
+    '''
+    loss_mat = ot.dist(x, y, metric='euclidean') # Get loss matrix
+    batch_size = config.batch_size # Obtain batch size
+    ab = torch.ones(batch_size)/batch_size # Give each element from the sample equal weight
+    w1 = ot.emd2(ab, ab, loss_mat) # Compute Wasserstein-1 distance
+    return w1
+
+def w2_loss(x, y, config):
+    '''
+    20230718 ZMALIK: Compute an estimate of the W2 distance between sample x and y
+    INPUT: 
+      x: n by 2 vector
+      y: n by 2 vector
+      config: Input arguments from terminal.
+    OUTPUT:
+      w1: Estimate of the Wasserstein-1 distance between the two distributions
+      from which x and y are drawn from. 
+    '''
+    loss_mat = ot.dist(x,y) # Get loss matrix
+    batch_size = config.batch_size # Obtain batch size
+    ab = torch.ones(batch_size)/batch_size # Give each element from the sample equal weight
+    w1 = ot.emd2(ab, ab, loss_mat) ** 0.5 # Compute Wasserstein-2 distance
+    return w1
+

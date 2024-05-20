@@ -9,6 +9,8 @@ import torch
 import os
 from torch.autograd import Variable
 from scipy.optimize import linear_sum_assignment as linear_assignment
+# Get Python Optimal Transport (make sure you run pip install pot on the command line before running this code)
+import ot
 # from sklearn.utils.linear_assignment_ import linear_assignment -> Deprecated
 DISPLAY_NUM = 150
 
@@ -122,3 +124,21 @@ def to_data(x):
     if torch.cuda.is_available():
         x = x.cpu()
     return x.data.numpy()
+  
+def shuffle(z, r):
+  """Takes in inputs z and r and shuffles the order in z such that z[i] is
+  closest to r[i], as per squared euclidean distance. """
+  # Get optimal transport matrix, rows correspond to different r[i] while columns to z[i]
+  #z = z.detach().numpy() # First convert into np arrays
+  #r = r.detach().numpy()
+  z = to_data(z)
+  r = to_data(r)
+  M = ot.dist(r,z) # Get OT matrix
+  row_ind, col_ind = linear_assignment(M) # Solve for corresponding indices
+  z = z[col_ind] # Shuffle z matrix
+  z = torch.tensor(z, dtype = torch.float32)
+  r = torch.tensor(r, dtype = torch.float32) # Convert back to tensor
+  if torch.cuda.is_available():
+    z = z.cuda()
+    r = r.cuda()
+  return z

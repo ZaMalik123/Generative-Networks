@@ -12,6 +12,7 @@ from data_loader import get_loader
 from w1_model import W1
 from w2_model import W2
 from bot_model import BaryOT
+from jsd_model import JSD
 from options import Options
 # from tensorboardX import SummaryWriter
 from torch.utils.tensorboard import SummaryWriter
@@ -48,6 +49,8 @@ def main():
         model = W2(config, r_loader, z_loader)
     elif config.solver == 'bary_ot':
         model = BaryOT(config, r_loader, z_loader)
+    elif config.solver == 'jsd':
+        model = JSD(config, r_loader, z_loader)
     cudnn.benchmark = True
     networks = model.get_networks(config)
     utils.print_networks(networks)
@@ -80,11 +83,13 @@ def main():
         print("dual stage complete.")
 
     ## main training loop of w1 / w2 or stage 2 (map stage) of bary-ot
+    ##20230615 ZMALIK: Also includes training for JSD now 
     map_iters = config.map_iters if config.solver == 'bary_ot' else config.train_iters
     if config.solver == 'bary_ot':
         print("Starting: map stage for %d iters." % map_iters)
     else:
         print("Starting training...")
+    start_train_time = time.time() # 20230907 ZMALIK: Time when model started training
     for step in range(map_iters):
         model.train_iter(config)
         if ((step+1) % 10) == 0:
@@ -92,6 +97,11 @@ def main():
             end_time = time.time()
             stats['disp_time'] = (end_time - start_time) / 60.
             start_time = end_time
+            # 20230907 ZMALIK: Time since training started (in minutes)
+            stats['time'] = (start_time - start_train_time) / 60
+            # 20230718ZMALIK: Compute W1 and W2 distances to check convergence
+            stats['W1(G(z),T(x))'] = losses.w1_loss(model.g(fixed_z), discrete_tz, config)
+            stats['W2(G(z),T(x))'] = losses.w2_loss(model.g(fixed_z), discrete_tz, config)
             if not config.no_benchmark:
                 if config.gen:
                     stats['l2_dist/discrete_T_x--G_x'] = losses.calc_l2(fixed_z, model.g(fixed_z), discrete_tz).data.item()

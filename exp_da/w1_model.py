@@ -18,7 +18,12 @@ class W1(Base):
             z = utils.to_var(next(self.z_generator)[0])
             gz = self.g(z)
             r = utils.to_var(next(self.r_generator)[0])
-        return r, gz
+        # ZMALIK 20240404 Include previous sample, if needed/available
+        if hasattr(self, 'g_min1'):
+          g_min1_z = self.g_min1(z)
+        else:
+          g_min1_z = []
+        return r, gz, g_min1_z, z # 20240404 ZMALIK: Unpack 4 values, not 2.
 
     def define_d(self, config):
         self.phi = networks.get_d(config)
@@ -32,15 +37,20 @@ class W1(Base):
         d_loss += losses.gp_loss(x, y, self.phi, config.lambda_gp, clamp=config.clamp)
         return d_loss
 
-
-    def calc_gloss(self, x, y, ux, vy, config):
-        return torch.mean(vy)
+    # 20240426 ZMALIK: New option for generator update
+    def calc_gloss(self, x, y, y1, ux, vy, config):
+       if config.follow_ode: # Explicitly follow ODE and do MSE fitting
+          gloss = torch.nn.MSELoss()
+          return gloss(y,y1); 
+       else:
+          return torch.mean(vy) #Original update rule found in Leygonie et al
 
     def get_stats(self,  config):
         """print outs"""
         stats = OrderedDict()
         stats['loss/disc'] = self.d_loss
         stats['loss/gen'] = self.g_loss
+        stats['w1_loss'] = self.wp_loss
         return stats
 
     def get_networks(self):

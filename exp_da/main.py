@@ -11,6 +11,7 @@ from w1_model import W1
 from w2_model import W2
 from bot_model import BaryOT
 from options import Options
+from networks import SimpleCNN
 # from tensorboardX import SummaryWriter
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.neighbors import KNeighborsClassifier
@@ -55,6 +56,12 @@ def main():
         networks = model.get_networks()
         utils.print_networks(networks)
 
+        # 20240404 ZMALIK: Define and train classifier for FID 
+        if config.use_fid == 1:
+          cnn_classifier = SimpleCNN()
+          utils.trainSimpleCNN(cnn_classifier, config)
+        
+        
         ## training
         ## stage 1 (dual stage) of bary_ot
         start_time = time.time()
@@ -76,6 +83,7 @@ def main():
             print("Starting: map stage for %d iters." % map_iters)
         else:
             print("Starting training...")
+        start_train_time = time.time() # 20240404 ZMALIK: Time when training started
         for step in range(map_iters):
             model.train_iter(config)
             if ((step+1) % 100) == 0:
@@ -83,6 +91,9 @@ def main():
                 end_time = time.time()
                 stats['disp_time'] = (end_time - start_time) / 60.
                 start_time = end_time
+                # 20240404 ZMALIK: Display wallclock time as well
+                stats['time'] = (start_time - start_train_time) / 60
+                stats['1NN_accuracy'] = utils.print_accuracy(config, model, disp=False)
                 utils.print_out(stats, step+1, map_iters, tbx_writer)
             if ((step+1) % 500) == 0:
                 images = model.get_visuals(config)
@@ -98,7 +109,7 @@ def main():
 
     ## 2) visualization
     if config.solver != 'none':
-        root = "./usps_test" if config.direction == 'usps-mnist' else "./mnist_test"
+        root = "./wasserstein-2/exp_da/usps_test" if config.direction == 'usps-mnist' else "./wasserstein-2/exp_da/mnist_test"
         file = open(os.path.join(root, "data.pkl"), "rb")
         fixed_z = pickle.load(file)
         file.close()

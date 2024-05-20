@@ -6,8 +6,12 @@ import torch
 import os
 import torchvision.utils as vutils
 from data_loader import get_data
+from data_loader import get_mnist_loader, get_usps_loader
 from torch.autograd import Variable
 from sklearn.neighbors import KNeighborsClassifier
+import torch.nn as nn
+import torch.optim as optim
+import torchvision.transforms as transforms
 
 def print_out(losses, curr_iter, total_iter, tbx_writer=None):
     msg = 'Step [%d/%d], ' % (curr_iter, total_iter)
@@ -24,7 +28,7 @@ def print_opts(config):
         print('%s: %s' % (str(k), str(v)))
     print('-------------- End ----------------')
 
-def print_accuracy(config, model):
+def print_accuracy(config, model, disp=True):
     classifier = KNeighborsClassifier(n_neighbors=1)
     X, y = get_data(config)
     X, y = to_var(X), to_var(y)
@@ -38,14 +42,17 @@ def print_accuracy(config, model):
     Xhat, yhat = to_data(Xhat), to_data(yhat)
     pred = classifier.predict(Xhat.reshape(Xhat.shape[0], -1))
     accuracy = (pred == yhat.reshape(-1)).astype(float).mean()
-    print('Classification accuracy: %0.4f' % (accuracy))
+    if disp:
+      print('Classification accuracy: %0.4f' % (accuracy))
+    else:
+      return accuracy
 
 def visualize_iter(images, dir, step, config, data_range=(-1, 1)):
     for k, image in images.items():
-        vutils.save_image(image.cpu().data, os.path.join(dir, '%s_%06d.png' % (k, step)), normalize=True, range=data_range, nrow=int(np.sqrt(config.batch_size)))
+        vutils.save_image(image.cpu().data, os.path.join(dir, '%s_%06d.png' % (k, step)), normalize=True, value_range=data_range, nrow=int(np.sqrt(config.batch_size)))
 
 def visualize_single(image, path, config, data_range=(-1, 1)):
-    vutils.save_image(image.cpu().data, path, normalize=True, range=data_range, nrow=int(np.sqrt(config.batch_size)))
+    vutils.save_image(image.cpu().data, path, normalize=True, value_range=data_range, nrow=int(np.sqrt(config.batch_size)))
 
 def print_networks(networks):
     for name, net in networks.items():
@@ -82,3 +89,26 @@ def to_data(x):
     if torch.cuda.is_available():
         x = x.cpu()
     return x.data.numpy()
+
+# Train SimpleCNN 
+def trainSimpleCNN(model, config):
+  """Train a CNN to be a classifier. model is the simple CNN."""
+  if config.direction == 'usps-mnist':
+          train_loader = get_mnist_loader(config, batch_size=2007, train=False)
+  elif config.direction == 'mnist-usps':
+          train_loader = get_usps_loader(config, batch_size=10000, train=False)
+  num_epochs = config.cnn_epochs
+  criterion = nn.CrossEntropyLoss()
+  optimizer = optim.Adam(model.parameters(), lr=0.001)
+  
+  for epoch in range(num_epochs):
+    for images, labels in train_loader:
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+    print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+  # Save the trained model
+  torch.save(model.state_dict(), 'simple_cnn.pth')

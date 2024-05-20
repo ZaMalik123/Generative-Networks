@@ -6,13 +6,13 @@ class Options(object):
 
     def parse(self):
         parser = argparse.ArgumentParser()
-
+        # 20230526 ZMALIK: Add options for JSD GAN 
         # experiment
         parser.add_argument('--exp_name', type=str, default='test_run')
         parser.add_argument('--no_benchmark', action='store_true', help='do not compare against discrete OT benchmark')
         parser.add_argument('--exp_dir', type=str, default='.')
         parser.add_argument('--use_tbx', type=int, default=1, help='use tensorboardX')
-        parser.add_argument('--solver', type=str, choices=['w2', 'w1', 'bary_ot'], default='w2')
+        parser.add_argument('--solver', type=str, choices=['w2', 'w1', 'bary_ot', 'jsd'], default='w2')
         parser.add_argument('--gen', type=int, default=1, choices=[0, 1], help='represent map with a neural network (ex. GAN generator) as opposed to closed form expression; required for bary-OT')
 
         # training
@@ -24,12 +24,17 @@ class Options(object):
         # w1 / w2 only
         parser.add_argument('--train_iters', type=int, default=5000)
         parser.add_argument('--d_iters', type=int, default=5, help='# d updates per g update; defaults to 1 if solver=bary_ot')
+        parser.add_argument('--g_iters', type=int, default=1, help='# generator updates per epoch')
+        parser.add_argument('--shuffle', type=int, choices=[0,1], default=0, help='0 for no shuffling and 1 for shuffling')
+        parser.add_argument('--follow_ode', type=int, choices=[0,1], default=0, help='0 to not follow the governing ode explicitly, 1 to do so')
+        parser.add_argument('--ode_step', type=str, choices=['fe', 'ab1', 'ab2'], default='fe', help='specify method to produce next sample along the ode') #20230621 -> Incorporate various ode stepping methods
+        parser.add_argument('--delta_t', type=float, default=1, help='size of each time step') #20230616 ZMALIK -> Incorporate time domain along ode solve
         # bary-ot only (2 stages)
         parser.add_argument('--dual_iters', type=int, default=20000)
         parser.add_argument('--map_iters', type=int, default=20000)
 
         # data
-        parser.add_argument('--data', type=str, choices=['4gaussians', 'swissroll', 'checkerboard'], default='four-to-four')
+        parser.add_argument('--data', type=str, choices=['4gaussians', 'swissroll', 'checkerboard', 'ring'], default='four-to-four')
 
         # networks
         parser.add_argument('--g_n_layers', type=int, default=3)

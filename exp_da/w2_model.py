@@ -18,7 +18,12 @@ class W2(Base):
             z = utils.to_var(next(self.z_generator)[0])
             gz = self.g(z)
             r = utils.to_var(next(self.r_generator)[0])
-        return r, gz
+        # ZMALIK 20240404 Include previous sample, if needed/available
+        if hasattr(self, 'g_min1'):
+          g_min1_z = self.g_min1(z)
+        else:
+          g_min1_z = []
+        return r, gz, g_min1_z, z # 20240404 ZMALIK: Unpack 4 values, not 2.
 
     def define_d(self, config):
         self.phi, self.eps = networks.get_d(config), networks.get_d(config)
@@ -43,14 +48,33 @@ class W2(Base):
             d_loss += config.lambda_eps * torch.mean((torch.clamp(self.psi(y), min=0))**2)
         return d_loss
 
-    def calc_gloss(self, x, y, ux, vy, config):
-        return torch.mean(vy)
+    # 20240404 ZMALIK: Commented out old calc_gloss code
+    #def calc_gloss(self, x, y, ux, vy, config):
+    #    return torch.mean(vy)
 
+    # 20240404 ZMALIK: Explicitly compute MSE loss
+    def calc_gloss(self, x, y, y1, ux, vy, config):
+        """Computes generator loss by either original update rule or MSE fitting.
+        No shuffling implemented for high dimensional experiments."""
+        if config.follow_ode: # Explicitly follow ODE and do MSE fitting
+          gloss = torch.nn.MSELoss()
+          return gloss(y,y1); 
+        else:
+          return torch.mean(vy) #Original update rule found in Leygonie et al
+
+    def calc_w2loss(self, ux, vy, config):
+        """
+        Compute W2 distance between generated sample and target sample, using 
+        the KP computed from the discriminator.
+        """
+        return torch.mean(ux+vy)
+    
     def get_stats(self,  config):
         """print outs"""
         stats = OrderedDict()
         stats['loss/disc'] = self.d_loss
         stats['loss/gen'] = self.g_loss
+        stats['w2_loss'] = self.wp_loss
         return stats
 
     def get_networks(self):

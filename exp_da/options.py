@@ -22,6 +22,11 @@ class Options(object):
         # w1 / w2 only
         parser.add_argument('--train_iters', type=int, default=100000)
         parser.add_argument('--d_iters', type=int, default=5, help='# d updates per g update; defaults to 1 if solver=bary_ot')
+        # 20240404 ZMALIK: New options for experiments
+        parser.add_argument('--g_iters', type=int, default=1, help='# generator updates per epoch')
+        parser.add_argument('--follow_ode', type=int, choices=[0,1], default=0, help='0 to not follow the governing ode explicitly, 1 to do so')
+        parser.add_argument('--delta_t', type=float, default=1, help='size of each time step')
+        parser.add_argument('--ode_step', type=str, choices=['fe', 'ab1', 'ab2'], default='fe', help='specify method to produce next sample along the ode')
         # bary-ot only (2 stages)
         parser.add_argument('--dual_iters', type=int, default=20000)
         parser.add_argument('--map_iters', type=int, default=20000)
@@ -54,8 +59,13 @@ class Options(object):
         # bary-ot only
         parser.add_argument('--reg_type', type=str, choices=['l2', 'entropy'], default='l2')
 
+        # Evaluation
+        parser.add_argument('--cnn_epochs', type=int, default=500, help='# training epochs for classifier to compute FID')
+        parser.add_argument('--use_fid', type=int, default=0, choices=[0,1], help='compute fid for evaluation')
+        
         config = parser.parse_args()
         config.d_iters = 1 if config.solver == 'bary_ot' else config.d_iters
         config.eq_psi = config.eq_phi if config.eq_psi < 0 else config.eq_psi
         config.lambda_eq = config.lambda_ineq if config.lambda_eq < 0 else config.lambda_eq
+
         return config
